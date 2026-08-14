@@ -58,3 +58,16 @@ them directly:
 with engine.begin() as conn:
     conn.exec_driver_sql("LOAD TABLE items")
 ```
+
+## Alembic
+
+Installing `alembic` alongside `milvusql-sqlalchemy` is enough — importing the dialect registers a
+`milvusql`-specific `DefaultImpl` with Alembic automatically, no separate setup call needed. Ordinary
+`alembic revision --autogenerate` / `alembic upgrade` / `alembic downgrade` work against a `milvusql`
+engine the same way they do against any other dialect, compiling down to the same `CREATE TABLE`/
+`ADD FIELD` DDL described above.
+
+Migrations run without a wrapping transaction — Milvus has no multi-statement rollback (the same
+reason `Connection.rollback()` and `do_rollback()` behave the way they do throughout this dialect), so
+Alembic's `transactional_ddl` is `False` here rather than promising a rollback this backend can't
+perform if a migration fails partway through.

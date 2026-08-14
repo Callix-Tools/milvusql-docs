@@ -29,6 +29,42 @@ ALTER TABLE items DROP COLUMN category;
                      dropping a field require recreating the collection.
 ```
 
+## `JOIN` and `GROUP BY` are rejected, not silently wrong
+
+Milvus has no cross-collection join and no server-side grouping. Both parse — MilvusQL's grammar is
+otherwise ordinary SQL — but are rejected at translation time with a `NotSupportedError` naming the
+clause, rather than being silently dropped or executed against the wrong rows:
+
+```
+SELECT a.id FROM a JOIN b ON a.id = b.id
+                    ^ NotSupportedError: JOIN is not supported: Milvus has no cross-collection join
+
+SELECT category, COUNT(*) FROM items GROUP BY category
+                                      ^ NotSupportedError: GROUP BY is not supported
+```
+
+A wrapping subquery with no `JOIN`/`GROUP BY`/`ORDER BY`/`LIMIT`/`DISTINCT` of its own — the shape
+`Session.query(Model).filter(...).count()` produces — is still flattened and executed normally; only
+a subquery that would actually change which rows or how many reach the outer query is affected.
+
+## Ordering or aggregating by a plain column runs client-side
+
+`ORDER BY <vector column> <op> :q` is a real Milvus ANN search — it runs server-side. `ORDER BY` on
+an ordinary scalar column, and every aggregate (`SUM`/`AVG`/`MIN`/`MAX`/`COUNT(<column>)`, everything
+but a bare `COUNT(*)`) have no Milvus RPC equivalent: `milvusql` fetches every row the `WHERE` filter
+matches (up to Milvus's own per-call ceiling of 16384 rows) and sorts or reduces it in Python.
+
+If the `WHERE` filter itself matches at least that many rows, the true sort order or aggregate can no
+longer be verified over every matching row — rather than silently compute it over a truncated,
+arbitrary subset, `milvusql` raises `NotSupportedError` asking for a narrower filter:
+
+```
+SELECT category FROM items ORDER BY category LIMIT 10
+# NotSupportedError: ORDER BY cannot be honored: the WHERE filter matches at least
+# Milvus's own per-call row ceiling (16384), so the true sort order across every
+# matching row cannot be verified. Narrow the WHERE filter to match fewer rows.
+```
+
 ## Distance operators
 
 Spelled exactly as [pgvector](https://github.com/pgvector/pgvector) spells them, so a pgvector
@@ -81,9 +117,9 @@ SELECT id FROM items ORDER BY embedding <-> :q LIMIT 10 CONSISTENCY LEVEL Bounde
 ```
 
 Milvus has no transaction isolation levels — it has *read* consistency levels (`Strong`, `Bounded`,
-`Session`, `Eventually`), answering the same question ("how stale may the data I see be?") with a
-different vocabulary. A query's own `CONSISTENCY LEVEL` clause always wins over a connection-level
-default (see [Core → Consistency Level](../core/consistency-level)).
+`Session`, `Eventually`, `Customized`), answering the same question ("how stale may the data I see
+be?") with a different vocabulary. A query's own `CONSISTENCY LEVEL` clause always wins over a
+connection-level default (see [Core → Consistency Level](../core/consistency-level)).
 
 ## Clause order is strict
 
@@ -97,6 +133,15 @@ HYBRID SEARCH ... LIMIT [OFFSET] SEARCH PARAMS ... CONSISTENCY LEVEL ...
 them; `SEARCH PARAMS` must precede `CONSISTENCY LEVEL`. Out-of-order clauses are a `ParseError`,
 not a silent reordering — `sqlglot`'s modifier loop has no positional state and would otherwise
 accept the wrong order and emit it back reordered, silently changing what the query does.
+
+## Full-text search syntax parses, but doesn't execute yet
+
+MilvusQL's grammar (via `sqlglot-milvus`) also recognizes `MATCH(text) AGAINST (:q)` in a `WHERE`
+clause and `BM25_SCORE(text, :q)` for ranking — the language covers full-text search as well as
+vector and hybrid search. `milvusql`'s translation layer doesn't implement either yet, though: a
+`MATCH ... AGAINST` filter raises `NotSupportedError: unsupported filter expression: MatchAgainst`
+at execution time, and `BM25_SCORE` has no dispatch path at all. Don't reach for this syntax against
+a live connection until it lands — parsing successfully isn't a signal that `cursor.execute()` will.
 
 ## Migrating from pgvector
 
