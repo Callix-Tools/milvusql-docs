@@ -5,8 +5,8 @@ sidebar_position: 4
 # Consistency Level
 
 Milvus has no transaction isolation levels. It has *read* consistency levels — `Strong`, `Bounded`,
-`Session`, `Eventually` — answering the same question ("how stale may the data I see be?") with a
-different vocabulary.
+`Session`, `Eventually`, `Customized` — answering the same question ("how stale may the data I see
+be?") with a different vocabulary.
 
 ## Query-level: the `CONSISTENCY LEVEL` clause
 
@@ -48,5 +48,8 @@ with engine.connect().execution_options(isolation_level="Strong") as conn:
 
 This is a deliberate, understood reuse of an extension point built for a different vocabulary (SQL's
 five isolation levels) — SQLAlchemy itself never validates the value against that fixed set at
-runtime, it only round-trips whatever `set_isolation_level()` stored. See
-[SQLAlchemy → Overview](../sqlalchemy/overview) for the rest of the dialect.
+runtime, it only round-trips whatever `set_isolation_level()` stored. `milvusql-sqlalchemy` does its
+own validation instead, against exactly the five title-case Milvus consistency levels above —
+`isolation_level="strong"` or any other spelling `pymilvus`'s case-sensitive lookup wouldn't accept
+raises `sqlalchemy.exc.ArgumentError` at the point it's set, not a confusing failure deep inside the
+next query. See [SQLAlchemy → Overview](../sqlalchemy/overview) for the rest of the dialect.
