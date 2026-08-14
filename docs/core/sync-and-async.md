@@ -46,6 +46,13 @@ thread-pool wrapper around the sync client. For a client whose only job is round
 calls to a network service, that's a real, already-common shape (the same reason `psycopg` and
 `asyncpg` both exist for Postgres) — a natural fit for FastAPI/RAG-style backends.
 
+:::warning `CREATE INDEX` against Milvus Lite, over `aio`
+`AsyncMilvusClient.create_index` waits for completion via an `AllocTimestamp` RPC that Milvus
+Lite's *async* gRPC server doesn't implement — confirmed directly; the sync server handles the
+equivalent call fine. `CREATE INDEX` over `aio` currently only works against a real Milvus server,
+not Milvus Lite. Everything else on this page still holds unchanged.
+:::
+
 ## What's shared, concretely
 
 | Piece | Shared between sync and async? |

@@ -24,12 +24,12 @@ items = Table(
 )
 ```
 
-Renders `WITH (shards=1, consistency_level='Bounded', partition_key=category)` on `CREATE TABLE`.
+Renders `WITH (shards=1, consistency_level='Bounded', partition_key='category')` on `CREATE TABLE`.
 
-A single-column primary key with `autoincrement=True` renders inline as `PRIMARY KEY AUTO_INCREMENT`
-— not as a separate trailing `PRIMARY KEY (id)` constraint, which is what SQLAlchemy's base DDL
-compiler emits by default and MilvusQL's grammar doesn't parse the same way for `AUTO_INCREMENT`
-detection. Milvus only ever has one primary key column, so this is unconditional, not configurable.
+A single-column primary key with `autoincrement=True` renders with an inline `PRIMARY KEY
+AUTO_INCREMENT` keyword on the column, *in addition to* the standard trailing `PRIMARY KEY (id)`
+constraint SQLAlchemy's base DDL compiler always emits — both are present in the output. This is
+unconditional, not configurable.
 
 ## Index options
 

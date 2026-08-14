@@ -33,7 +33,10 @@ AUTO_INCREMENT` (Milvus requires `INT64` or `VARCHAR` primary keys — every `Au
 to distinguish Django's Auto field size classes by).
 
 **`AddField`** — maps to MilvusQL's `ALTER TABLE ... ADD FIELD`, the one `ALTER` operation Milvus
-supports.
+supports, **against a real Milvus server**. Milvus Lite's gRPC server does not implement
+`AddCollectionField`, so `AddField` raises `NotSupportedError` when `DATABASES` points at a local
+Milvus Lite file (the `NAME: "/path/to/items.db"` style config used elsewhere in these docs) — it
+only works against an actual Milvus server (`HOST`/`PORT`).
 
 ## What deliberately raises
 
