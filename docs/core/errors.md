@@ -43,6 +43,7 @@ etc.
 | `sqlglot.errors.UnsupportedError` | `NotSupportedError` | Well-formed, but Milvus (or MilvusQL) can't do it |
 | `MilvusUnavailableException` / `ConnectError` | `OperationalError` | Not reachable right now, not a bad request |
 | `CollectionNotExistException` / `IndexNotExistException` | `ProgrammingError` | The request names something that doesn't exist |
+| `SchemaNotReadyException` / `ParamError` | `ProgrammingError` | Bad schema/parameters — also a request the caller got wrong |
 | a plain `MilvusException` with `code=100`/`ErrorCode.COLLECTION_NOT_FOUND` | `ProgrammingError` | The server reports "doesn't exist" this way too — confirmed directly, not just the typed subclass |
 | a plain `MilvusException` mentioning "not loaded" | `ProgrammingError` | Searching an unloaded collection (no implicit `LOAD TABLE` — see [Overview](./overview)) |
 | any other `MilvusException` | `DatabaseError` | Generic fallback |

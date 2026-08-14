@@ -14,15 +14,19 @@ page covers the parts of the language that aren't obvious from ordinary SQL.
 SQL word. "Collection" remains the term one level down, in the `pymilvus` calls the AST is
 translated into (`client.create_collection(...)`, `client.load_collection(...)`, ...).
 
-## `ALTER TABLE` — only `ADD FIELD`
+## `ALTER TABLE` — only `ADD FIELD` and `RENAME TO`
 
-Milvus can add a field to an existing collection. It cannot change a field's type, change a
-vector's dimension, or drop a field. Attempting any of those is a `ParseError` explaining that the
+Milvus can add a field to an existing collection or rename the collection itself
+(`ALTER TABLE items RENAME TO new_items`). `ADD FIELD` also accepts the standard SQL spelling,
+`ADD COLUMN` — both dispatch identically. It cannot change a field's type, change a vector's
+dimension, or drop a field. Attempting any of those is a `ParseError` explaining that the
 collection needs recreating — never a silent no-op:
 
 ```
 ALTER TABLE items DROP COLUMN category;
-                   ^ ParseError: DROP COLUMN needs the collection recreated
+                   ^ ParseError: Milvus cannot DROP a field: only ADD FIELD and RENAME are
+                     supported. Changing a field's type, changing a vector's dimension and
+                     dropping a field require recreating the collection.
 ```
 
 ## Distance operators
@@ -65,7 +69,8 @@ RERANK RRF(k=60)
 LIMIT 10
 ```
 
-Two or more weighted arms, reranked by a strategy (`RRF`, or others Milvus supports). It sits where
+One or more arms, each optionally weighted, reranked by a strategy (`RRF`, or others Milvus
+supports). It sits where
 `ORDER BY` would in an ordinary vector search — it *is* the ranking criterion, just for more than
 one vector.
 

@@ -44,7 +44,7 @@ with engine.begin() as conn:
 with Session(engine) as session:
     session.add(CharacteristicKind(
         id="...", available_for_customer=True, code="c1", name="n1",
-        main_for_customer=1, is_deleted=False, is_composite=False,
+        main_for_customer=1, is_deleted=False,
         embedding=[0.1, 0.2, 0.3, 0.4],
     ))
     session.commit()

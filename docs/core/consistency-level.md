@@ -28,9 +28,14 @@ connection-level default is considered.
 conn = milvusql.connect(uri="./items.db", consistency_level="Session")
 ```
 
-Applied only when a `search`/`query` statement doesn't set its own `CONSISTENCY LEVEL`. `CREATE
-TABLE`, `INSERT`, `DELETE`, and friends don't take a consistency level at all — the fallback only
-applies to the two calls that read data.
+Applied only when a `search`/`query`/`hybrid_search` statement doesn't set its own
+`CONSISTENCY LEVEL`. `INSERT`, `DELETE`, and friends don't take a consistency level at all — the
+fallback only applies to the three calls that read data.
+
+`CREATE TABLE ... WITH (consistency_level=...)` is a separate, third mechanism: it sets the
+*collection's own* default consistency level, passed straight through to
+`MilvusClient.create_collection(...)`, and is independent of both the query-level clause and the
+connection-level fallback described here.
 
 ## In SQLAlchemy
 
