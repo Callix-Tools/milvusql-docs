@@ -1,0 +1,32 @@
+<svg width="100%" viewBox="0 0 680 270" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>milvusql</title>
+  <desc>A cluster of connected points representing a vector embedding space, not a relational table.</desc>
+  <style>
+    .mq-edge { stroke: rgba(15, 110, 86, 0.4); stroke-width: 1.5; }
+    .mq-node { fill: rgb(225, 245, 238); stroke: rgb(15, 110, 86); stroke-width: 1.5; }
+    @media (prefers-color-scheme: dark) {
+      .mq-edge { stroke: rgba(148, 163, 184, 0.45); }
+    }
+  </style>
+  <g class="mq-edge">
+    <line x1="227" y1="86" x2="325" y2="114"/>
+    <line x1="325" y1="114" x2="283" y2="51"/>
+    <line x1="325" y1="114" x2="381" y2="65"/>
+    <line x1="381" y1="65" x2="437" y2="100"/>
+    <line x1="255" y1="184" x2="325" y2="219"/>
+    <line x1="325" y1="219" x2="409" y2="205"/>
+    <line x1="409" y1="205" x2="458" y2="163"/>
+    <line x1="325" y1="114" x2="325" y2="219"/>
+  </g>
+  <g class="mq-node">
+    <circle cx="227" cy="86" r="10"/>
+    <circle cx="283" cy="51" r="8" opacity="0.8"/>
+    <circle cx="325" cy="114" r="11"/>
+    <circle cx="381" cy="65" r="7" opacity="0.75"/>
+    <circle cx="437" cy="100" r="10"/>
+    <circle cx="255" cy="184" r="8" opacity="0.8"/>
+    <circle cx="325" cy="219" r="11"/>
+    <circle cx="409" cy="205" r="8" opacity="0.75"/>
+    <circle cx="458" cy="163" r="7" opacity="0.6"/>
+  </g>
+</svg>
