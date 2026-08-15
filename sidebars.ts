@@ -24,6 +24,7 @@ const sidebars: SidebarsConfig = {
         'core/sync-and-async',
         'core/errors',
         'core/consistency-level',
+        'core/compatibility',
       ],
     },
     {
