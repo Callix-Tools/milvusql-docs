@@ -50,3 +50,14 @@ to produce.
 | `VARCHAR` | `String(length=...)` |
 | `FLOAT_VECTOR` | `VECTOR(dim=...)` |
 | `SPARSE_FLOAT_VECTOR` | `SPARSEVEC()` |
+
+:::warning `TEXT`, `ARRAY` and the new v1.0.0 vector types aren't in this map yet
+Reflection's type map (`milvusql_sqlalchemy.reflection._TYPE_MAP`) hasn't been extended for the
+column types v1.0.0 added at the DBAPI/MilvusQL level: a `TEXT` column reflects as a plain
+`String(length=65535)` — indistinguishable from an ordinary `VARCHAR(65535)`, since the map only
+looks at the Milvus field's `VARCHAR` type and ignores its `enable_analyzer`/`enable_match` flags.
+An `ARRAY<T>(n)` column, and `BINARYVEC`/`FLOAT16VEC`/`BFLOAT16VEC`/`INT8VEC` columns, all fall
+through to `NullType()` — there's no `ARRAY`/dimensioned-vector `TypeEngine` in
+[Types](./types) for them to reflect onto. Confirmed directly against the reflection source; not
+yet fixed.
+:::

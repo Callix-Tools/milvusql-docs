@@ -56,6 +56,22 @@ primary key after an `INSERT` — the standard `sqlite3`/`MySQLdb` convention), 
 - **No `ALTER TABLE` beyond `ADD FIELD`.** Enforced at the MilvusQL parser level
   ([`sqlglot-milvus`](https://github.com/Callix-Tools/sqlglot-milvus)), not here.
 
+## Beyond a single collection
+
+`JOIN`, `GROUP BY`, `HAVING`, subqueries, window functions, CTEs, set operations and correlated
+`EXISTS` all execute too — `translate.ast_to_pymilvus` routes anything that needs more than one
+Milvus read into a second dispatch table, `translate.relational`, which plans one read per
+collection and evaluates the rest client-side with [Polars](https://pola.rs). See
+[MilvusQL Concepts](../getting-started/concepts#join-group-by-and-subqueries-run-through-a-client-side-relational-engine)
+for what's pushed to Milvus versus evaluated client-side, and what's still rejected by name
+(`WITH RECURSIVE`, `INTERSECT ALL`/`EXCEPT ALL`, window frame clauses, ...).
+
+Full-text search (`TEXT` columns, `BM25_SCORE`, `MATCH ... AGAINST`), `ARRAY`/`JSON` filter
+functions, and introspection (`SHOW TABLES`/`SHOW DATABASES`, `DESCRIBE`, `CREATE`/`DROP DATABASE`,
+`USE`, `DROP INDEX`) are ordinary statements through the same `Cursor.execute()` — nothing at the
+DBAPI surface changes to support them. See [MilvusQL Concepts](../getting-started/concepts) for the
+full language reference.
+
 ## Next
 
 - [Sync and Async](./sync-and-async) — the same dispatch table, two call-site layers

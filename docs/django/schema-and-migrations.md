@@ -38,6 +38,16 @@ supports, **against a real Milvus server**. Milvus Lite's gRPC server does not i
 Milvus Lite file (the `NAME: "/path/to/items.db"` style config used elsewhere in these docs) — it
 only works against an actual Milvus server (`HOST`/`PORT`).
 
+:::warning `TextField` renders as `TEXT`, not `VARCHAR(65535)` (breaking change in v1.0.0)
+Before v1.0.0, `models.TextField()` rendered as a plain `VARCHAR(65535)`. As of v1.0.0 it renders
+as MilvusQL's `TEXT` type — an analyzer-enabled, keyword-matchable `VARCHAR(65535)` — so
+`MATCH ... AGAINST` and a BM25-generated `SPARSEVEC` column can consume it (see
+[MilvusQL Concepts → Full-text search](../getting-started/concepts#full-text-search-bm25-and-match--against)).
+The bytes stored are the same; only the field's analyzer/match flags differ. A collection an app's
+migrations already created before upgrading keeps its old `VARCHAR(65535)` field as-is — this only
+changes what `CreateModel` emits for a `TextField` going forward.
+:::
+
 ## What deliberately raises
 
 ```python

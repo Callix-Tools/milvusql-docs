@@ -51,10 +51,12 @@ in SQLAlchemy or Django to get it.
 
 ## Status
 
-Early development. The DBAPI core and the SQLAlchemy dialect are exercised end-to-end against
-Milvus Lite (create/load/insert/search/delete/release, DDL, reflection). The Django backend's
-schema/migration layer is a first cut — see [Schema & Migrations](./django/schema-and-migrations)
-for exactly what that does and doesn't cover yet.
+`milvusql` reached **v1.0.0** — packaged as `Development Status :: 5 - Production/Stable`. The DBAPI
+core and the SQLAlchemy dialect are exercised end-to-end against Milvus Lite (create/load/insert/
+search/delete/release, DDL, reflection, full-text, `JOIN`/`GROUP BY`/subqueries). The Django
+backend's schema/migration layer is still a first cut — see
+[Schema & Migrations](./django/schema-and-migrations) for exactly what that does and doesn't cover
+yet.
 
 ## Next steps
 
