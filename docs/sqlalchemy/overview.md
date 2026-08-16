@@ -67,6 +67,56 @@ with engine.begin() as conn:
 Everything else — filtering, plain `SELECT`, `INSERT`, `DELETE`, `LIMIT`/`OFFSET` — is base
 SQLAlchemy behavior, untouched.
 
+## `JOIN`, `GROUP BY`, subqueries and correlated `EXISTS`
+
+None of this needed dialect-side work — it's inherited from the DBAPI's relational engine (see
+[MilvusQL Concepts](../getting-started/concepts#join-group-by-and-subqueries-run-through-a-client-side-relational-engine)),
+which plans a statement that needs more than one collection, a grouped aggregate, or a subquery
+into one Milvus read per collection and evaluates the rest client-side with Polars. The ordinary
+Core/ORM constructs that compile down to this now run:
+
+```python
+select(Item.id, func.count()).select_from(Item).join(Category, Item.category_id == Category.id) \
+    .group_by(Category.title).having(func.count() > 1)
+
+select(Category.id).where(Category.items.any(Item.price > 20))   # correlated EXISTS
+```
+
+`.join()`/`.outerjoin()`, `.group_by()`/`.having()`, `col.in_(select(...))`, and relationship
+`.any()`/`.has()` (decorrelated into a semi/anti join) all plan through it; `Query.count()` stays a
+server-side `count(*)` with no rows fetched. What's rejected — a correlated subquery beyond `EXISTS`
+equality, `WITH RECURSIVE`, `INTERSECT ALL`/`EXCEPT ALL`, window frame clauses, `LAG`/`LEAD`/`NTILE`
+— is documented in [Concepts](../getting-started/concepts) alongside everything that *is* supported
+(window functions, CTEs, `UNION`/`INTERSECT`/`EXCEPT`, `SELECT *` across a join).
+
+## Full-text search
+
+A `sa.Text` column is Milvus's analyzer-enabled full-text input, no dialect-specific type needed —
+pair it with a `SPARSEVEC` column and SQLAlchemy's own `Computed()` for the BM25-generated field,
+and rank with a plain `func.BM25_SCORE(...)`:
+
+```python
+from sqlalchemy import BigInteger, Column, Computed, Table, Text, func, select
+from milvusql_sqlalchemy.types import SPARSEVEC, VECTOR
+
+docs = Table(
+    "docs", metadata,
+    Column("id", BigInteger, primary_key=True, autoincrement=True),
+    Column("content", Text),
+    Column("content_sparse", SPARSEVEC(), Computed("BM25(content)")),
+    Column("embedding", VECTOR(768)),
+)
+
+select(docs.c.content).order_by(
+    func.BM25_SCORE(docs.c.content_sparse, "vector similarity search").desc()
+).limit(2)
+```
+
+`MATCH(...) AGAINST (...)` has no `Comparator` method of its own — reach for `text()`/
+`exec_driver_sql()` for the raw filter form. See
+[Concepts → Full-text search](../getting-started/concepts#full-text-search-bm25-and-match--against)
+for what `TEXT`/`BM25_SCORE`/`MATCH ... AGAINST` do at the MilvusQL level.
+
 ## Transactions
 
 `commit()`/`rollback()` at the SQLAlchemy engine level are no-ops (`do_rollback` specifically —

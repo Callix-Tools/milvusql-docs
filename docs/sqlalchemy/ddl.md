@@ -49,6 +49,34 @@ String values in `WITH (...)` are single-quoted — MilvusQL follows ANSI SQL he
 means a quoted *identifier* and `'...'` means a string literal. (A double-quoted value in a
 property parses as `exp.Var`, not `exp.Literal` — confirmed directly against `sqlglot-milvus`.)
 
+## BM25 full-text: `Computed()` for the generated `SPARSEVEC`
+
+`GENERATED ALWAYS AS (BM25(<text column>))` — the one server-side generated column Milvus
+supports — needs no dialect-specific construct: SQLAlchemy's own `Computed()` already renders it,
+since the base `DDLCompiler` appends a generated-column clause to any column carrying one:
+
+```python
+from sqlalchemy import BigInteger, Column, Computed, Table, Text
+from milvusql_sqlalchemy.types import SPARSEVEC, VECTOR
+
+docs = Table(
+    "docs", metadata,
+    Column("id", BigInteger, primary_key=True, autoincrement=True),
+    Column("content", Text),
+    Column("content_sparse", SPARSEVEC(), Computed("BM25(content)")),
+    Column("embedding", VECTOR(768)),
+)
+Index(
+    "idx_fts", docs.c.content_sparse,
+    milvusql_using="SPARSE_INVERTED_INDEX",
+    milvusql_with={"metric_type": "BM25"},
+)
+```
+
+A plain `sa.Text` column is Milvus's analyzer-enabled full-text input (`TEXT` in MilvusQL) — see
+[MilvusQL Concepts → Full-text search](../getting-started/concepts#full-text-search-bm25-and-match--against)
+for what `TEXT`/`BM25_SCORE`/`MATCH ... AGAINST` do underneath.
+
 ## Loading a collection
 
 `LOAD TABLE`/`RELEASE TABLE` have no `Table`/`Index`-level equivalent to attach kwargs to — issue
