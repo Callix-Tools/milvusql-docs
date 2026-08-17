@@ -45,7 +45,7 @@ etc.
 | `CollectionNotExistException` / `IndexNotExistException` | `ProgrammingError` | The request names something that doesn't exist |
 | `SchemaNotReadyException` / `ParamError` | `ProgrammingError` | Bad schema/parameters — also a request the caller got wrong |
 | a plain `MilvusException` with `code=100`/`ErrorCode.COLLECTION_NOT_FOUND` | `ProgrammingError` | The server reports "doesn't exist" this way too — confirmed directly, not just the typed subclass |
-| a plain `MilvusException` mentioning "not loaded" | `ProgrammingError` | Searching an unloaded collection (no implicit `LOAD TABLE` — see [Overview](./overview)) |
+| a plain `MilvusException` mentioning "not loaded" | `ProgrammingError` | A collection isn't loaded — rare now that `search`/`query`/`hybrid_search` auto-`LOAD` on first use per connection (see [Overview → Loading a collection](./overview#loading-a-collection)), but still possible: a bare `MilvusClient` call outside this DBAPI can release a collection out from under a connection's cache, and auto-`LOAD` itself can fail this way too (no index yet, collection dropped concurrently) |
 | any other `MilvusException` | `DatabaseError` | Generic fallback |
 | `grpc.RpcError` with `UNIMPLEMENTED` | `NotSupportedError` | Some RPCs aren't implemented on every server (Milvus Lite, notably) |
 | `grpc.RpcError` with `UNAVAILABLE`/`DEADLINE_EXCEEDED` | `OperationalError` | Transport-level connectivity failure |
