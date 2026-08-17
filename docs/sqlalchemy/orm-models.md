@@ -76,12 +76,15 @@ as a column type either. Store UUIDs as `Mapped[str]` / `mapped_column(String(36
 Python's own `uuid.UUID(...)`/`str(...)` at the boundary — there's no dialect-level UUID type to
 `import` here the way there is for Postgres.
 
-**A collection must be explicitly `LOAD`ed before it can be queried** (`SELECT`, `Session.get()`, a
-relationship lazy-load, ...) — `milvusql` never auto-loads (see
-[Concepts](../getting-started/concepts)). `Base.metadata.create_all()` does not load the collections
-it creates, so issue `LOAD TABLE <name>` once (through `conn.execute(text(...))`, same as any other
-raw DDL/DML this dialect doesn't have a `Table`-level Core construct for) before querying through the
-ORM.
+**A collection is loaded automatically the first time it's queried** (`SELECT`, `Session.get()`, a
+relationship lazy-load, ...) — `milvusql`'s `Cursor`/`AsyncCursor` auto-`LOAD` a collection on first
+use per connection and cache the result (see [Core → Overview](../core/overview#loading-a-collection));
+`milvusql-sqlalchemy` gets this for free since it drives the ORM through that same `Cursor`.
+`Base.metadata.create_all()` still doesn't create an index, and a vector search still needs one
+regardless of load state, so `LOAD TABLE <name>` (through `conn.execute(text(...))`, same as any
+other raw DDL/DML this dialect doesn't have a `Table`-level Core construct for) is only needed
+explicitly if you want control over replica count or want to warm a collection up ahead of traffic —
+not as a precondition for querying through the ORM.
 
 **Nullable columns need `nullable=True` (or an `Optional`/`| None` `Mapped` type) to actually be
 nullable at the Milvus schema level**, not just at the Python type level — `milvusql`'s `CREATE TABLE`

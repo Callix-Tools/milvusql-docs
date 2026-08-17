@@ -45,11 +45,18 @@ rows = cur.fetchall()
 `fetchall`, `description`, `rowcount`, `lastrowid` (populated from Milvus's `auto_id`-assigned
 primary key after an `INSERT` — the standard `sqlite3`/`MySQLdb` convention), and iteration.
 
+## Loading a collection
+
+`search`/`query`/`hybrid_search` need a loaded collection server-side. Rather than making every
+caller issue `LOAD TABLE` by hand first, `Cursor`/`AsyncCursor` auto-`LOAD` a collection
+transparently the first time a connection runs one of those three against it, then cache the
+result — each collection loads at most once per connection. Explicit `LOAD TABLE`/`RELEASE TABLE`
+are still available and useful for controlling replica count or warming a collection up ahead of
+traffic; they're just no longer required before a plain `SELECT` will work. A collection still
+needs an index before it's searchable at all — auto-`LOAD` doesn't create one.
+
 ## What it does *not* do
 
-- **No implicit `LOAD TABLE`.** Searching an unloaded collection raises `ProgrammingError` naming
-  the collection, rather than silently loading it — that's a potentially slow operation an
-  innocuous-looking `SELECT` shouldn't trigger behind your back.
 - **No real transactions.** `commit()` is a no-op (every mutation is already applied the moment
   `pymilvus` returns); `rollback()` raises `NotSupportedError` — Milvus has no multi-statement
   rollback, and a silent no-op here would read as "rolled back" to code that trusts it.
