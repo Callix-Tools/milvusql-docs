@@ -13,9 +13,9 @@ Column("embedding", VECTOR(768))
 ```
 
 Renders as `VECTOR(768)` in DDL — MilvusQL's `FLOAT_VECTOR` field type. Bind values pass through as
-plain Python lists; nothing is stringified (`bind_processor` is the identity function), because
-`milvusql`'s DBAPI takes real Python values in its `parameters` dict and never serializes a vector
-into SQL text.
+plain Python lists; nothing is stringified (`bind_processor` copies the value into a new `list` and
+returns it, with no serialization), because `milvusql`'s DBAPI takes real Python values in its
+`parameters` dict and never serializes a vector into SQL text.
 
 ### Comparator methods
 
