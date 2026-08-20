@@ -26,7 +26,8 @@ uv add milvusql
 ```
 
 This pulls in [`sqlglot-milvus`](https://github.com/Callix-Tools/sqlglot-milvus) (the MilvusQL
-parser) and `pymilvus` — nothing else.
+parser), `pymilvus`, and `polars` (the client-side relational engine used for `JOIN`/`GROUP
+BY`/subqueries) — nothing else.
 
 ## SQLAlchemy
 

@@ -27,10 +27,10 @@ with connection.schema_editor() as editor:
     editor.create_model(Item)
 ```
 
-A single-column primary key with `autoincrement=True` renders inline as `id BIGINT PRIMARY KEY
-AUTO_INCREMENT` (Milvus requires `INT64` or `VARCHAR` primary keys — every `AutoField`/
-`BigAutoField`/`SmallAutoField` maps to `BIGINT`, since Milvus has no `INT32` auto-increment option
-to distinguish Django's Auto field size classes by).
+A primary key that is the model's auto field (`AutoField`/`BigAutoField`/`SmallAutoField`) renders
+inline as `id BIGINT PRIMARY KEY AUTO_INCREMENT` (Milvus requires `INT64` or `VARCHAR` primary
+keys — every Auto field maps to `BIGINT`, since Milvus has no `INT32` auto-increment option to
+distinguish Django's Auto field size classes by).
 
 **`AddField`** — maps to MilvusQL's `ALTER TABLE ... ADD FIELD`, the one `ALTER` operation Milvus
 supports, **against a real Milvus server**. Milvus Lite's gRPC server does not implement
@@ -65,10 +65,11 @@ actually happened — the same philosophy `sqlglot-milvus` applies to `ALTER TAB
 
 ## What `create_model` does *not* do
 
-It does **not** automatically create a vector index or `LOAD` the collection. Milvus requires an
-index before a collection is searchable, but the index method and metric (`HNSW` vs. `IVF_FLAT`,
-`COSINE` vs. `L2`) are a query-shape decision, not something a generic schema migration should
-guess at. Call this explicitly once the model is defined — in a data migration, or at app startup:
+For a model with at least one `VectorField`, it does **not** automatically create a vector index or
+`LOAD` the collection. Milvus requires an index before a collection is searchable, but the index
+method and metric (`HNSW` vs. `IVF_FLAT`, `COSINE` vs. `L2`) are a query-shape decision, not
+something a generic schema migration should guess at. Call this explicitly once the model is
+defined — in a data migration, or at app startup:
 
 ```python
 from milvusql_django.schema import create_index_and_load
@@ -81,6 +82,14 @@ create_index_and_load(
 
 This is the single biggest open item in this package. It's flagged here rather than papered over
 with a guessed default.
+
+A model with **no** vector field of its own is the one exception to all of the above: Milvus refuses
+to create a collection whose schema has zero vector columns, which would make plain bookkeeping
+tables — Django's own `django_migrations` included — impossible. So for such a model `create_model`
+splices a hidden `_milvusql_pad_vector VECTOR(2)` column into the `CREATE TABLE` and calls
+`create_index_and_load()` on *that* column itself (skipped under `collect_sql=True`, i.e.
+`sqlmigrate` and other dry runs). A collection isn't queryable at all until it's indexed and loaded,
+not just for vector search — this is what lets vector-free models work.
 
 ## Not implemented at all
 
