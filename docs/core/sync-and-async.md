@@ -63,5 +63,7 @@ not Milvus Lite. Everything else on this page still holds unchanged.
 | `Connection`/`AsyncConnection`, `Cursor`/`AsyncCursor` classes | No — one sync, one async, same shape |
 
 `build_call()` never calls the network-touching `pymilvus` method itself — it returns a small
-`Call(method, kwargs, postprocess)` describing what to call. `Cursor.execute()` calls it directly;
-`AsyncCursor.execute()` awaits it. Neither implementation needs to know the other exists.
+`Call(method, kwargs, postprocess, then)` describing what to call (`then` drives the second RPC
+`UPDATE` needs, iterator paging, and the relational engine's per-collection chain — both cursors
+loop on it). `Cursor.execute()` calls it directly; `AsyncCursor.execute()` awaits it. Neither
+implementation needs to know the other exists.

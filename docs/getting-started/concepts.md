@@ -14,13 +14,14 @@ page covers the parts of the language that aren't obvious from ordinary SQL.
 SQL word. "Collection" remains the term one level down, in the `pymilvus` calls the AST is
 translated into (`client.create_collection(...)`, `client.load_collection(...)`, ...).
 
-## `ALTER TABLE` — only `ADD FIELD` and `RENAME TO`
+## `ALTER TABLE` — only `ADD FIELD`
 
-Milvus can add a field to an existing collection or rename the collection itself
-(`ALTER TABLE items RENAME TO new_items`). `ADD FIELD` also accepts the standard SQL spelling,
-`ADD COLUMN` — both dispatch identically. It cannot change a field's type, change a vector's
-dimension, or drop a field. Attempting any of those is a `ParseError` explaining that the
-collection needs recreating — never a silent no-op:
+Milvus can add a field to an existing collection. `ADD FIELD` also accepts the standard SQL
+spelling, `ADD COLUMN` — both dispatch identically. It cannot change a field's type, change a
+vector's dimension, drop a field, or rename the collection — `RENAME TO` parses (`sqlglot-milvus`
+accepts the standard SQL grammar) but has no execution path and raises `NotSupportedError`.
+Attempting a `DROP` is a `ParseError` explaining that the collection needs recreating — never a
+silent no-op:
 
 ```
 ALTER TABLE items DROP COLUMN category;
@@ -45,7 +46,10 @@ ALTER TABLE items DROP COLUMN category;
 Anything not in this table (a UUID type, `DECIMAL`, ...) is a `NotSupportedError` naming the type,
 never a silent guess at the nearest Milvus equivalent. `DESCRIBE <table>` (see
 [Introspection](#introspection-show-describe-databases-drop-index) below) prints a column back in
-exactly this spelling, so its output round-trips into `CREATE TABLE` unchanged.
+exactly this spelling for every type in this table **except `TEXT`**: a `TEXT` column is stored as
+an analyzer-enabled `VARCHAR`, so `DESCRIBE` prints it as `VARCHAR(65535)` — re-running that
+spelling gives a plain `VARCHAR` without `enable_analyzer`/`enable_match`, not the original `TEXT`
+column.
 
 ## `JOIN`, `GROUP BY` and subqueries run through a client-side relational engine
 
@@ -78,8 +82,9 @@ What reaches Milvus, and what's evaluated client-side:
 Also supported through this engine: `ROW_NUMBER()`/`RANK()`/`DENSE_RANK()` and aggregate functions
 `OVER (PARTITION BY ... [ORDER BY ...])` — top-*k*-per-group over a search's own hits, which an ANN
 index cannot answer directly; `WITH` CTEs (each visible to the ones declared after it, same as SQL);
-`UNION`/`INTERSECT`/`EXCEPT` (not their `ALL` variants — see below); and `SELECT *`, including a
-qualified `t.*` and a star across a join, where it means what it says — each side is asked for
+`UNION`/`UNION ALL`/`INTERSECT`/`EXCEPT` (not `INTERSECT ALL`/`EXCEPT ALL` — see below); and
+`SELECT *`, including a qualified `t.*` and a star across a join, where it means what it says —
+each side is asked for
 `output_fields=["*"]`, so every field of every collection comes back, **vectors included**. Naming
 the columns is the difference between moving a few scalars and moving every embedding.
 
@@ -191,7 +196,7 @@ query needs no rewriting to become MilvusQL:
 
 :::warning `<=>` collides with MySQL
 MySQL spells null-safe equality `<=>`; MilvusQL spells cosine distance the same way. Inside
-MilvusQL these four characters mean cosine distance and nothing else — generating MilvusQL from a
+MilvusQL these three characters mean cosine distance and nothing else — generating MilvusQL from a
 MySQL `NullSafeEQ` node reports an unsupported-operation error instead of silently emitting `<=>`.
 :::
 
@@ -217,9 +222,10 @@ RERANK RRF(k=60)
 LIMIT 10
 ```
 
-One or more arms, each optionally weighted, reranked by a strategy (`RRF`, or others Milvus
-supports). It sits where
-`ORDER BY` would in an ordinary vector search — it *is* the ranking criterion, just for more than
+One or more arms, each optionally weighted, reranked by a strategy — `RRF` (optionally
+`RRF(k=...)`, default `k=60`) or `WEIGHTED` (uses each arm's `WEIGHT`); any other name is a
+`NotSupportedError`. It sits where `ORDER BY` would in an ordinary vector search — it *is* the
+ranking criterion, just for more than
 one vector. `BM25_SCORE(...)` (see [Full-text search](#full-text-search-bm25-and-match--against)
 below) can be one of the arms, fusing a dense vector search with full-text relevance.
 
@@ -231,8 +237,10 @@ SELECT id FROM items ORDER BY embedding <-> :q LIMIT 10 CONSISTENCY LEVEL Bounde
 
 Milvus has no transaction isolation levels — it has *read* consistency levels (`Strong`, `Bounded`,
 `Session`, `Eventually`, `Customized`), answering the same question ("how stale may the data I see
-be?") with a different vocabulary. A query's own `CONSISTENCY LEVEL` clause always wins over a
-connection-level default (see [Core → Consistency Level](../core/consistency-level)).
+be?") with a different vocabulary. A query's own `CONSISTENCY LEVEL` clause wins over a
+connection-level default on a vector search and on anything routed through the relational engine —
+see [Core → Consistency Level](../core/consistency-level) for the precedence details and the one
+gap (plain filter `SELECT` and `HYBRID SEARCH`).
 
 ## Clause order is strict
 
@@ -303,7 +311,7 @@ DESCRIBE docs;
 Reads Milvus's own `describe_collection` and prints each column in exactly the spelling documented
 in [Column types](#column-types) above, including a generated BM25 column (called out in its own
 `Extra` cell as `generated by BM25(content)`) — so `DESCRIBE`'s output round-trips into a
-`CREATE TABLE` statement unchanged.
+`CREATE TABLE` statement unchanged, with the `TEXT`/`VARCHAR(65535)` exception noted above.
 
 ```sql
 CREATE DATABASE tenant_a;

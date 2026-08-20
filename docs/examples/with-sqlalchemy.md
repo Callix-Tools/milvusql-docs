@@ -38,7 +38,7 @@ with engine.begin() as conn:
     rows = conn.execute(
         select(items.c.id, items.c.category)
         .where(items.c.category == "book")
-        .order_by(items.c.embedding.l2_distance([0.1] * 8))
+        .order_by(items.c.embedding.cosine_distance([0.1] * 8))
         .limit(5)
     ).all()
     print(rows)

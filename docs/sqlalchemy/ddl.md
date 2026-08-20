@@ -89,11 +89,25 @@ with engine.begin() as conn:
 
 ## Alembic
 
-Installing `alembic` alongside `milvusql-sqlalchemy` is enough — importing the dialect registers a
-`milvusql`-specific `DefaultImpl` with Alembic automatically, no separate setup call needed. Ordinary
-`alembic revision --autogenerate` / `alembic upgrade` / `alembic downgrade` work against a `milvusql`
-engine the same way they do against any other dialect, compiling down to the same `CREATE TABLE`/
-`ADD FIELD` DDL described above.
+Importing the dialect registers a `milvusql`-specific `DefaultImpl` with Alembic automatically, no
+separate setup call needed — this turns Alembic's otherwise-opaque `KeyError` for an unregistered
+dialect into a working engine.
+
+:::warning Alembic migrations still cannot run end to end against Milvus
+Alembic's own `alembic_version` bookkeeping table (`version_num VARCHAR(32) PRIMARY KEY`) has no
+vector column, and Milvus refuses to create a collection with zero vector fields. `alembic upgrade`,
+`alembic downgrade` and `alembic revision --autogenerate` therefore all fail with
+
+```
+NotSupportedError: CREATE TABLE 'alembic_version' has no VECTOR/SPARSEVEC column --
+Milvus requires at least one vector field per collection.
+```
+
+raised client-side before any RPC. This is a Milvus limitation, surfaced as an explicit error rather
+than papered over with a hidden pad column. (`milvusql-django` takes the opposite approach for its
+own bookkeeping table — see
+[Django → Schema & Migrations](../django/schema-and-migrations#what-create_model-does-not-do).)
+:::
 
 Migrations run without a wrapping transaction — Milvus has no multi-statement rollback (the same
 reason `Connection.rollback()` and `do_rollback()` behave the way they do throughout this dialect), so

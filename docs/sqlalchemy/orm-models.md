@@ -68,9 +68,11 @@ right-hand part of a dotted identifier as the collection name — the schema seg
 dropped, not honored, not rejected. Don't rely on it for isolation; use a separate `db_name` (a
 separate connection/engine) instead if you need namespacing.
 
-**No UUID column type.** Milvus's own field types don't include anything UUID-shaped (`_SCALAR_TYPES`
-in `milvusql.translate.ast_to_pymilvus` covers Milvus's actual `INT8`/`INT16`/`INT32`/`INT64`/
-`FLOAT`/`DOUBLE`/`BOOLEAN`/`JSON`/`VARCHAR`/vector types only). `sqlalchemy.Uuid`/
+**No UUID column type.** Milvus's own field types don't include anything UUID-shaped (`_map_datatype`
+in `milvusql.translate.ast_to_pymilvus` accepts only Milvus's actual column types — the
+integer/float/boolean/JSON scalars in `_SCALAR_TYPES`, plus `VARCHAR`, `TEXT`, `ARRAY<T>(n)`,
+`VECTOR(n)`, `SPARSEVEC` and the dimensioned vector spellings — and raises `NotSupportedError` for
+anything else, `CHAR` included). `sqlalchemy.Uuid`/
 `sqlalchemy.dialects.postgresql.UUID` render as `CHAR(...)`, which MilvusQL's grammar doesn't accept
 as a column type either. Store UUIDs as `Mapped[str]` / `mapped_column(String(36))` and convert with
 Python's own `uuid.UUID(...)`/`str(...)` at the boundary — there's no dialect-level UUID type to

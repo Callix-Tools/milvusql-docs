@@ -40,7 +40,7 @@ query_vector = [0.12] * 8
 cur.execute(
     """
     SELECT id, text FROM documents
-    ORDER BY embedding <-> :q
+    ORDER BY embedding <=> :q
     LIMIT 2
     SEARCH PARAMS (ef_search=64)
     """,
@@ -66,7 +66,7 @@ async def main():
     conn = aio.connect(uri="./rag_example.db")
     cur = conn.cursor()
     await cur.execute(
-        "SELECT id, text FROM documents ORDER BY embedding <-> :q LIMIT 2",
+        "SELECT id, text FROM documents ORDER BY embedding <=> :q LIMIT 2",
         {"q": [0.12] * 8},
     )
     for row in await cur.fetchall():
