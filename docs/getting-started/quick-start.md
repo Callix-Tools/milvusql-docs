@@ -61,7 +61,7 @@ cur.execute(
     """
     SELECT id, category FROM items
     WHERE category = :cat
-    ORDER BY embedding <-> :q
+    ORDER BY embedding <=> :q
     LIMIT 5
     SEARCH PARAMS (ef_search=64)
     """,
@@ -71,8 +71,9 @@ print(cur.fetchall())
 # [(1, 'book')]
 ```
 
-`<->` is L2 distance, spelled exactly as [pgvector](https://github.com/pgvector/pgvector) spells
-it — see [MilvusQL Concepts](./concepts) for the full operator table.
+`<=>` is cosine distance (matching the index's `metric_type='COSINE'` above), spelled exactly as
+[pgvector](https://github.com/pgvector/pgvector) spells it — see [MilvusQL
+Concepts](./concepts) for the full operator table.
 
 ## Delete
 
