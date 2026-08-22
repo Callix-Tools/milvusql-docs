@@ -239,8 +239,8 @@ Milvus has no transaction isolation levels — it has *read* consistency levels 
 `Session`, `Eventually`, `Customized`), answering the same question ("how stale may the data I see
 be?") with a different vocabulary. A query's own `CONSISTENCY LEVEL` clause wins over a
 connection-level default on a vector search and on anything routed through the relational engine —
-see [Core → Consistency Level](../core/consistency-level) for the precedence details and the one
-gap (plain filter `SELECT` and `HYBRID SEARCH`).
+see [Core → Consistency Level](../core/consistency-level) for the precedence details and the
+gap (plain filter `SELECT`, scalar `ORDER BY`, bare aggregates, and `HYBRID SEARCH`).
 
 ## Clause order is strict
 
