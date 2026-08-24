@@ -60,8 +60,10 @@ needs an index before it's searchable at all — auto-`LOAD` doesn't create one.
 - **No real transactions.** `commit()` is a no-op (every mutation is already applied the moment
   `pymilvus` returns); `rollback()` raises `NotSupportedError` — Milvus has no multi-statement
   rollback, and a silent no-op here would read as "rolled back" to code that trusts it.
-- **No `ALTER TABLE` beyond `ADD FIELD`.** Enforced at the MilvusQL parser level
-  ([`sqlglot-milvus`](https://github.com/Callix-Tools/sqlglot-milvus)), not here.
+- **No `ALTER TABLE` beyond `ADD FIELD`.** `DROP`/`ALTER COLUMN`/`MODIFY` are rejected at parse
+  time by [`sqlglot-milvus`](https://github.com/Callix-Tools/sqlglot-milvus); `RENAME TO` parses
+  fine but has no execution path and raises `NotSupportedError` in `milvusql`'s own translate
+  layer instead (see [MilvusQL Concepts → `ALTER TABLE`](../getting-started/concepts#alter-table--only-add-field)).
 
 ## Beyond a single collection
 

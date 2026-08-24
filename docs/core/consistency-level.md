@@ -21,7 +21,8 @@ cur.execute("""
 
 This wins over the connection-level default on a vector `ORDER BY ... <op> :q` search and on any
 statement routed through the relational engine (`JOIN`/`GROUP BY`/subquery). On a plain filter
-`SELECT` and on `HYBRID SEARCH`, the clause is currently parsed but not read when the call is
+`SELECT`, a scalar (non-vector) `ORDER BY`, a bare aggregate (`COUNT`/`SUM`/... with no
+`GROUP BY`), and on `HYBRID SEARCH`, the clause is currently parsed but not read when the call is
 built, so the connection-level default applies instead — a gap tracked as a bug, not a documented
 choice.
 
