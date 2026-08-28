@@ -81,7 +81,9 @@ What reaches Milvus, and what's evaluated client-side:
 
 Also supported through this engine: `ROW_NUMBER()`/`RANK()`/`DENSE_RANK()` and aggregate functions
 `OVER (PARTITION BY ... [ORDER BY ...])` — top-*k*-per-group over a search's own hits, which an ANN
-index cannot answer directly; `WITH` CTEs (each visible to the ones declared after it, same as SQL);
+index cannot answer directly (the `ORDER BY` inside `OVER (...)` takes exactly one key; a composite
+ordering such as `ORDER BY score DESC, id ASC` raises `NotSupportedError`); `WITH` CTEs (each visible
+to the ones declared after it, same as SQL);
 `UNION`/`UNION ALL`/`INTERSECT`/`EXCEPT` (not `INTERSECT ALL`/`EXCEPT ALL` — see below); and
 `SELECT *`, including a qualified `t.*` and a star across a join, where it means what it says —
 each side is asked for
