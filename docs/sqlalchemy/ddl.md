@@ -31,6 +31,13 @@ AUTO_INCREMENT` keyword on the column, *in addition to* the standard trailing `P
 constraint SQLAlchemy's base DDL compiler always emits — both are present in the output. This is
 unconditional, not configurable.
 
+`milvusql_consistency_level` above is a separate mechanism from the connection-level default and
+the query-level `CONSISTENCY LEVEL` clause — it only sets the *collection's own* default, passed
+straight through to `create_collection(...)`. See
+[Core → Consistency Level](../core/consistency-level) for all three and how they interact, and its
+[In SQLAlchemy](../core/consistency-level#in-sqlalchemy) section for the `create_engine`/
+`execution_options(isolation_level=...)` connection-level default this dialect supports.
+
 ## Index options
 
 ```python
