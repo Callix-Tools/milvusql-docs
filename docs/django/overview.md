@@ -92,4 +92,4 @@ rewrite can't express it.
 | `schema_editor().create_model()` | Works — see [Schema & Migrations](./schema-and-migrations) |
 | `RemoveField`/`AlterField` | Raise `NotImplementedError` on purpose — Milvus can't do either |
 | `vector_search()`/`hybrid_search()` helpers | Works — see [Search Helpers](./search-helpers) |
-| `dbshell` | Not supported — Milvus Lite has no CLI client |
+| `dbshell` | Not supported, always — Milvus Lite has no CLI client, and a real server's `milvus_cli` isn't bundled either |
