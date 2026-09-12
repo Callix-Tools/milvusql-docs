@@ -55,8 +55,9 @@ with Session(engine) as session:
 
 This end-to-end shape (a model with a string primary key, nullable columns, plain scalar columns, and
 a `VECTOR` column, exercised through `create_all()` → `insert` → `Session.get()`) is verified directly
-against Milvus Lite, not assumed from SQLAlchemy's general dialect contract — two real gaps were found
-and fixed while confirming it (see below), not just this specific example.
+against a real Milvus server (via `testcontainers`, not Milvus Lite — see the integration test
+fixtures), not assumed from SQLAlchemy's general dialect contract — two real gaps were found and fixed
+while confirming it (see below), not just this specific example.
 
 ## Milvus-specific caveats for declarative models
 

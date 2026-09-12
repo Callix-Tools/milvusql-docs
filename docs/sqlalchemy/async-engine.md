@@ -65,9 +65,10 @@ asyncio.run(main())
 ## What makes this work, briefly
 
 `milvusql.aio.AsyncConnection`/`AsyncCursor` are adapted onto SQLAlchemy's own
-`AsyncAdapt_dbapi_connection` — the same generic bridge `asyncmy`'s and `asyncpg`'s dialects use — so
-no custom connection/cursor subclass was needed. Two details worth knowing if something looks
-surprising:
+`AsyncAdapt_dbapi_connection` — the same generic bridge `asyncmy`'s dialect uses — so no custom
+connection/cursor subclass was needed. (`asyncpg`'s dialect predates that generic connector and
+implements its own bespoke adapter classes instead, so it isn't a second example of the same
+bridge.) Two details worth knowing if something looks surprising:
 
 - The pool defaults to `AsyncAdaptedQueuePool` (SQLAlchemy's `QueuePool` cannot back an async engine —
   every async dialect sets this explicitly, `milvusql+aio` included).
