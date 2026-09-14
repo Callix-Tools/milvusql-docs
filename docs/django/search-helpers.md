@@ -66,12 +66,13 @@ Each tuple is `(field_name, metric, query_vector, weight)`. Builds the same
 `HYBRID SEARCH (...) RERANK ...` text the [SQLAlchemy dialect's `hybrid_search()`](../sqlalchemy/hybrid-search)
 produces, with the same bind-parameter-per-arm shape.
 
-## Full-text search: no helper needed
+## Full-text search: no helper needed, but the sparse column isn't a model field
 
 Unlike vector/hybrid search, BM25 full-text retrieval needs no explicit helper — a `models.TextField()`
 is Milvus's analyzer-enabled full-text input (`TEXT` in DDL — see
 [Schema & Migrations](./schema-and-migrations)), and ordering by a generic `models.Func(...,
-function="BM25_SCORE")` compiles through Django's normal `SQLCompiler` into a real Milvus `search`:
+function="BM25_SCORE")` compiles through Django's normal `SQLCompiler` into a real Milvus `search`,
+**once the generated `SPARSEVEC` column it scores against exists**:
 
 ```python
 from django.db import models
@@ -85,6 +86,37 @@ Item.objects.annotate(
     )
 ).order_by("-score").values("id")[:10]
 ```
+
+`content_sparse` here is **not** a `VectorField` (or any other) model field — `milvusql-django` has
+no field type for a `GENERATED ALWAYS AS (BM25(...))` column, and the schema editor's column-list
+builder doesn't special-case one either, so `create_model()`/migrations cannot create it. It has to
+be part of the table's DDL from the start, issued as raw SQL through `connection.cursor()` instead
+of through `create_model()`, the same way the package's own integration test does it:
+
+```python
+with connection.cursor() as cursor:
+    cursor.execute(
+        "CREATE TABLE items ("
+        "id BIGINT PRIMARY KEY AUTO_INCREMENT, "
+        "content TEXT, "
+        "content_sparse SPARSEVEC GENERATED ALWAYS AS (BM25(content))"
+        ") WITH (consistency_level='Strong')"
+    )
+    cursor.execute(
+        "CREATE INDEX idx_items_sparse ON items (content_sparse) "
+        "USING SPARSE_INVERTED_INDEX WITH (metric_type='BM25')"
+    )
+```
+
+Adding it to a table `create_model()` already made isn't a safe fallback either: `milvusql`'s
+`ALTER TABLE ... ADD FIELD` translator only reads the new column's type, not any
+`GENERATED ALWAYS AS (...)` constraint on it, so an `ALTER TABLE items ADD FIELD content_sparse
+SPARSEVEC GENERATED ALWAYS AS (BM25(content))` issued the same way silently drops the BM25
+relationship instead of rejecting it outright — see
+[Schema & Migrations](./schema-and-migrations#generated-bm25-columns-arent-a-model-field). Declare
+the generated column as part of `CREATE TABLE` from the start, as above, not added later.
+`models.F("content_sparse")` in the `.annotate()` above then resolves fine regardless of how the
+column was created, because Django's ORM addresses columns by name, not by declared field.
 
 Keyword filtering goes through raw SQL — `MATCH(content) AGAINST (:q)` has no `.filter()` lookup —
 via `connection.cursor()`, the same escape hatch [vector search](#vector_search) itself uses. See
