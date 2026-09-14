@@ -159,6 +159,29 @@ This is the one server where the ceiling is still a hard stop — everywhere els
 unchanged.
 :::
 
+## `UPDATE` can reassign the primary key on an `AUTO_INCREMENT` table
+
+`UPDATE` is a read (matching rows fetched via `query`) whose results feed a write (`upsert`), not a
+single RPC. Against a real (non-Lite) Milvus server, that `upsert()` does **not** honor the existing
+primary-key value for an `auto_id=True` collection — every column named in `SET` is correctly
+overwritten in place, but the row is silently given a *new* server-assigned id regardless, even when
+the update never touches the primary key:
+
+```sql
+-- `items.id BIGINT PRIMARY KEY AUTO_INCREMENT`, an existing row with id=7
+UPDATE items SET category = 'book' WHERE id = 7
+-- category is updated in place, but the row's id is no longer 7 -- Milvus mints a
+-- new id for it. Row count is unaffected (a rename, not a duplicate).
+```
+
+There is no workaround through any Milvus API: an `auto_id` field categorically cannot be given an
+explicit value on any write, `upsert` included, so `UPDATE` can never guarantee a row's id survives
+it. Code that needs a stable identity across updates needs a non-`auto_id` (caller-assigned) primary
+key instead — a `VARCHAR` or plain `BIGINT PRIMARY KEY` without `AUTO_INCREMENT`.
+
+Milvus Lite is more lenient and preserves the given id, so this only reproduces against a real
+server — test `UPDATE` on `auto_id` tables against one before relying on primary-key stability.
+
 ## Arrays and JSON filter server-side
 
 `ARRAY<T>(capacity)` and `JSON` columns both filter server-side, translated into Milvus's own

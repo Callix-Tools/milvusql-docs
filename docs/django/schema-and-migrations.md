@@ -48,6 +48,19 @@ migrations already created before upgrading keeps its old `VARCHAR(65535)` field
 changes what `CreateModel` emits for a `TextField` going forward.
 :::
 
+## Generated BM25 columns aren't a model field
+
+There is no `milvusql_django.fields` type for a `GENERATED ALWAYS AS (BM25(...))` column, and
+`DatabaseSchemaEditor`'s column-list builder doesn't special-case one either — `create_model()` has
+no way to emit `content_sparse SPARSEVEC GENERATED ALWAYS AS (BM25(content))` for any field type a
+model can declare. A collection that needs a BM25-generated sparse column has to get one through raw
+SQL via `connection.cursor()` instead, declared as part of `CREATE TABLE` (not added afterward —
+`ALTER TABLE ... ADD FIELD` maps only a column's type, not a `GENERATED ALWAYS AS (...)` constraint
+on it, so issuing the ALTER instead silently produces a plain, non-generated column rather than
+rejecting the request). See [Search Helpers → Full-text search](./search-helpers#full-text-search-no-helper-needed-but-the-sparse-column-isnt-a-model-field)
+for the full pattern, including how `models.F()` still addresses the raw-SQL column by name once it
+exists.
+
 ## What deliberately raises
 
 ```python
